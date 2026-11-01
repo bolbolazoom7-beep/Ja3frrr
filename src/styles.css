@@ -1,0 +1,110 @@
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-dark: #111116;
+    --surface-dark: #1B1B23;
+    --surface-dark-elevated: #23232E;
+    --border-dark: rgba(255, 255, 255, 0.08);
+    --border-dark-hover: rgba(169, 148, 247, 0.3);
+    
+    --bg-light: #F6F3EE;
+    --surface-light: #FFFFFF;
+    --surface-light-elevated: #EDE8DF;
+    --border-light: rgba(0, 0, 0, 0.08);
+    --border-light-hover: rgba(169, 148, 247, 0.4);
+
+    --accent-violet: #A994F7;
+    --accent-teal: #8BCFC2;
+    --text-muted: #A6A2B3;
+  }
+
+  html {
+    font-family: 'IBM Plex Sans Arabic', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+}
+
+.font-ruqaa {
+  font-family: 'Aref Ruqaa', serif;
+}
+
+.font-arabic {
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+}
+
+.font-sans-en {
+  font-family: 'Inter', sans-serif;
+}
+
+.font-code {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Custom delicate scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(169, 148, 247, 0.2);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(169, 148, 247, 0.4);
+}
+
+/* Subtle glow effect */
+.glow-ink {
+  box-shadow: 0 0 40px -10px rgba(169, 148, 247, 0.15);
+}
+
+.glow-teal {
+  box-shadow: 0 0 30px -10px rgba(139, 207, 194, 0.18);
+}
+
+/* Atmospheric Ambient Backgrounds with subtle radial lights & dot matrix */
+.bg-ambient-dark {
+  background-color: #0d0d12;
+  background-image:
+    radial-gradient(at 15% 10%, rgba(169, 148, 247, 0.10) 0px, transparent 50%),
+    radial-gradient(at 85% 20%, rgba(139, 207, 194, 0.08) 0px, transparent 45%),
+    radial-gradient(at 50% 85%, rgba(169, 148, 247, 0.06) 0px, transparent 55%),
+    radial-gradient(circle, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 28px 28px;
+  background-attachment: fixed;
+}
+
+.bg-ambient-light {
+  background-color: #F8F6F1;
+  background-image:
+    radial-gradient(at 15% 10%, rgba(169, 148, 247, 0.09) 0px, transparent 50%),
+    radial-gradient(at 85% 20%, rgba(139, 207, 194, 0.08) 0px, transparent 45%),
+    radial-gradient(at 50% 85%, rgba(245, 158, 11, 0.05) 0px, transparent 50%),
+    radial-gradient(circle, rgba(30, 27, 45, 0.035) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 26px 26px;
+  background-attachment: fixed;
+}
+
+@keyframes ambientOrbMotion {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  50% {
+    transform: translate(30px, -25px) scale(1.08);
+  }
+}
+
+.animate-ambient-slow {
+  animation: ambientOrbMotion 16s ease-in-out infinite;
+}
+
+.animate-ambient-reverse {
+  animation: ambientOrbMotion 20s ease-in-out infinite reverse;
+}
