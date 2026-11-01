@@ -101,32 +101,73 @@ import { ChatState } from '../services/chat-state';
           </button>
         </div>
 
-        <!-- Search Input -->
-        <div class="px-3 pb-2">
-          <div class="relative">
+        <!-- Search Input with Clear Button -->
+        <div class="px-3 pb-2 space-y-1.5">
+          <div class="relative flex items-center">
             <input
               [formControl]="searchControl"
               (input)="onSearchChange()"
               type="text"
               [placeholder]="chatState.language() === 'ar' ? 'بحث في المحادثات...' : 'Search conversations...'"
-              class="w-full bg-[#1B1B23] dark:bg-[#1B1B23] light:bg-white border border-white/5 dark:border-white/5 light:border-black/10 rounded-xl py-1.5 px-7 text-xs focus:outline-none focus:border-[#A994F7]/50"
+              class="w-full bg-[#1B1B23] dark:bg-[#1B1B23] light:bg-white border border-white/5 dark:border-white/5 light:border-black/10 rounded-xl py-1.5 px-8 text-xs focus:outline-none focus:border-[#A994F7]/50"
               [attr.aria-label]="chatState.language() === 'ar' ? 'بحث في المحادثات' : 'Search conversations'"
             />
             <mat-icon
-              class="absolute top-1.5 text-[#A6A2B3] pointer-events-none"
-              [class]="chatState.language() === 'ar' ? 'right-2' : 'left-2'"
+              class="absolute text-[#A6A2B3] pointer-events-none"
+              [class]="chatState.language() === 'ar' ? 'right-2.5' : 'left-2.5'"
               style="font-size: 15px;"
             >
               search
             </mat-icon>
+
+            @if (searchControl.value.trim()) {
+              <button
+                type="button"
+                (click)="clearSearch()"
+                class="absolute p-0.5 rounded-md text-[#A6A2B3] hover:text-white dark:hover:text-white light:hover:text-stone-900 hover:bg-white/10 cursor-pointer"
+                [class]="chatState.language() === 'ar' ? 'left-2' : 'right-2'"
+                [attr.title]="chatState.language() === 'ar' ? 'مسح البحث' : 'Clear search'"
+                [attr.aria-label]="chatState.language() === 'ar' ? 'مسح البحث' : 'Clear search'"
+              >
+                <mat-icon style="font-size: 15px; width: 15px; height: 15px;">close</mat-icon>
+              </button>
+            }
           </div>
+
+          @if (searchControl.value.trim()) {
+            <div class="flex items-center justify-between px-1 text-[11px] text-[#A6A2B3]">
+              <span class="truncate">
+                {{ chatState.language() === 'ar' ? 'تصفية:' : 'Filter:' }}
+                <span class="text-[#A994F7] font-semibold">"{{ searchControl.value.trim() }}"</span>
+              </span>
+              <button
+                type="button"
+                (click)="clearSearch()"
+                class="text-[#8BCFC2] hover:underline cursor-pointer shrink-0 font-medium"
+              >
+                {{ chatState.language() === 'ar' ? 'مسح البحث' : 'Clear' }}
+              </button>
+            </div>
+          }
         </div>
 
         <!-- Conversations List -->
         <div class="flex-1 overflow-y-auto px-2 py-1 space-y-1">
           @if (chatState.visibleConversations().length === 0) {
-            <div class="py-12 text-center text-xs text-[#A6A2B3]">
-              {{ chatState.language() === 'ar' ? 'لا توجد محادثات نشطة' : 'No active chats' }}
+            <div class="py-10 text-center text-xs text-[#A6A2B3] space-y-2">
+              @if (searchControl.value.trim()) {
+                <p>{{ chatState.language() === 'ar' ? 'لا توجد محادثات تطابق هذا البحث' : 'No chats match this search' }}</p>
+                <button
+                  type="button"
+                  (click)="clearSearch()"
+                  class="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[#8BCFC2] font-medium text-[11px] border border-white/5 cursor-pointer"
+                >
+                  <mat-icon style="font-size: 13px;">clear_all</mat-icon>
+                  <span>{{ chatState.language() === 'ar' ? 'مسح البحث وعرض الكل' : 'Clear search & show all' }}</span>
+                </button>
+              } @else {
+                <p>{{ chatState.language() === 'ar' ? 'لا توجد محادثات سابقة' : 'No previous chats' }}</p>
+              }
             </div>
           } @else {
             @for (conv of chatState.visibleConversations(); track conv.id) {
@@ -339,15 +380,22 @@ export class HistoryDrawer {
   pinError = signal<string>('');
 
   onSearchChange() {
-    this.chatState.searchQuery.set(this.searchControl.value);
+    this.chatState.searchQuery.set(this.searchControl.value.trim());
+  }
+
+  clearSearch() {
+    this.searchControl.setValue('');
+    this.chatState.clearSearch();
   }
 
   onNewChat() {
+    this.clearSearch();
     this.chatState.startNewConversation();
     this.dismiss.emit();
   }
 
   selectChat(id: string) {
+    this.clearSearch();
     this.chatState.selectConversation(id);
     this.dismiss.emit();
   }
@@ -380,14 +428,15 @@ export class HistoryDrawer {
   deleteChat(event: MouseEvent, id: string) {
     event.stopPropagation();
     const isAr = this.chatState.language() === 'ar';
-    if (confirm(isAr ? 'هل أنت متأكد من حذف هذه المحادثة؟' : 'Delete this conversation?')) {
+    if (confirm(isAr ? 'هل أنت متأكد من حذف هذه المحادثة من السجل؟' : 'Delete this conversation from history?')) {
       this.chatState.deleteConversation(id);
     }
   }
 
   clearAll() {
     const isAr = this.chatState.language() === 'ar';
-    if (confirm(isAr ? 'هل أنت متأكد من مسح جميع المحادثات نهائياً؟' : 'Permanently clear all chat history?')) {
+    if (confirm(isAr ? 'هل أنت متأكد من مسح جميع الدردشات السابقة نهائياً؟ سيتم تنظيف السجل والبحث بالكامل.' : 'Permanently clear all chat history?')) {
+      this.clearSearch();
       this.chatState.clearAllConversations();
     }
   }

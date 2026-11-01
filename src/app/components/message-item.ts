@@ -85,7 +85,7 @@ import { ChatState } from '../services/chat-state';
             </div>
           } @else {
             <div
-              class="px-4 py-2.5 rounded-2xl text-sm md:text-base leading-relaxed break-words shadow-xs border transition-colors select-text"
+              class="px-4 py-2.5 rounded-2xl text-sm md:text-base leading-relaxed break-words shadow-xs border transition-colors select-none"
               [class]="chatState.theme() === 'dark' 
                 ? 'bg-[#1E1B2E] border-[#A994F7]/30 text-[#E6E4EC]' 
                 : 'bg-[#7C5CE6] border-[#7C5CE6] text-white'"

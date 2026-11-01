@@ -544,13 +544,22 @@ type SettingsTab =
                       </p>
                     </div>
 
-                    <div class="flex items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        (click)="clearAllChats()"
+                        class="px-3.5 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/25 text-rose-300 dark:text-rose-300 light:text-rose-700 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                      >
+                        <mat-icon style="font-size: 16px;">delete_sweep</mat-icon>
+                        <span>{{ chatState.language() === 'ar' ? 'مسح كل الدردشات السابقة وتنظيف البحث' : 'Clear All Previous Chats' }}</span>
+                      </button>
+
                       <button
                         type="button"
                         (click)="clearLocalData()"
-                        class="px-3.5 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 dark:text-rose-300 light:text-rose-700 font-bold text-xs transition-colors cursor-pointer"
+                        class="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[#A6A2B3] hover:text-white font-medium text-xs transition-colors cursor-pointer"
                       >
-                        {{ chatState.language() === 'ar' ? 'مسح بيانات المتصفح بالكامل' : 'Clear Browser Data' }}
+                        {{ chatState.language() === 'ar' ? 'مسح كل بيانات المتصفح وإعادة الضبط' : 'Reset All Browser Data' }}
                       </button>
                     </div>
                   </div>
@@ -612,34 +621,13 @@ type SettingsTab =
                         </button>
                       </div>
 
-                      <!-- Provider Choice -->
-                      <div>
-                        <span class="block text-xs font-semibold mb-1 text-inherit">
-                          {{ chatState.language() === 'ar' ? 'المزود النشط الرئيسي' : 'Active Primary Provider' }}
+                      <!-- NoTrack Active Badge -->
+                      <div class="flex items-center justify-between p-3 rounded-xl bg-[#8BCFC2]/10 border border-[#8BCFC2]/25 text-[#8BCFC2] text-xs">
+                        <span class="flex items-center gap-2 font-bold">
+                          <mat-icon style="font-size: 18px; width: 18px; height: 18px;">bolt</mat-icon>
+                          <span>{{ chatState.language() === 'ar' ? 'المزود النشط: NoTrack.ai (غير مقيد فائق الخصوصية)' : 'Active Engine: NoTrack.ai (Uncensored)' }}</span>
                         </span>
-                        <select
-                          [formControl]="activeProviderControl"
-                          class="w-full rounded-xl px-3.5 py-2 text-xs border bg-white/5 dark:bg-[#181820] light:bg-white border-white/10 dark:border-white/10 light:border-black/10 focus:outline-none"
-                        >
-                          <option value="gemini">Google Gemini (مع البحث المباشر والوسائط المتعددة)</option>
-                          <option value="notrack">NoTrack.ai (OpenAI Compatible Protocol)</option>
-                        </select>
-                      </div>
-
-                      <!-- Gemini Settings -->
-                      <div class="p-3.5 rounded-xl border border-white/10 dark:border-white/10 light:border-black/10 space-y-2.5">
-                        <span class="font-bold text-xs text-[#A994F7] block">Google Gemini API</span>
-                        <div>
-                          <span class="block text-[11px] text-[#A6A2B3] mb-1">
-                            {{ chatState.language() === 'ar' ? 'مفتاح Gemini API الجديد (اتركه فارغاً للحفاظ على الحالي)' : 'Gemini API Key' }}
-                          </span>
-                          <input
-                            [formControl]="geminiKeyControl"
-                            type="password"
-                            placeholder="AIzaSy..."
-                            class="w-full rounded-xl px-3 py-1.5 text-xs font-mono border bg-white/5 dark:bg-[#181820] light:bg-white border-white/10 dark:border-white/10 light:border-black/10 focus:outline-none"
-                          />
-                        </div>
+                        <span class="font-mono text-[10px] px-2 py-0.5 rounded bg-[#8BCFC2]/20 font-bold">notrack-uncensored</span>
                       </div>
 
                       <!-- NoTrack Settings -->
@@ -891,8 +879,7 @@ export class SettingsDialog implements OnInit {
   adminError = signal<string>('');
   activeAdminCode = signal<string>('');
 
-  activeProviderControl = new FormControl<'gemini' | 'notrack'>('gemini', { nonNullable: true });
-  geminiKeyControl = new FormControl<string>('', { nonNullable: true });
+  activeProviderControl = new FormControl<'notrack'>('notrack', { nonNullable: true });
   notrackKeyControl = new FormControl<string>('', { nonNullable: true });
   notrackUrlControl = new FormControl<string>('https://api.notrack.ai/v1', { nonNullable: true });
   notrackModelControl = new FormControl<string>('notrack-uncensored', { nonNullable: true });
@@ -918,7 +905,7 @@ export class SettingsDialog implements OnInit {
     this.customInstructionsControl.setValue(pers.customInstructions);
 
     const cfg = this.chatState.config();
-    this.activeProviderControl.setValue(cfg.provider || 'gemini');
+    this.activeProviderControl.setValue('notrack');
     this.notrackUrlControl.setValue(cfg.baseUrl);
     this.notrackModelControl.setValue(cfg.model);
   }
@@ -990,6 +977,14 @@ export class SettingsDialog implements OnInit {
     this.chatState.webSearchSettings.update((prev) => ({ ...prev, enabled: checked }));
   }
 
+  clearAllChats() {
+    const isAr = this.chatState.language() === 'ar';
+    if (confirm(isAr ? 'هل أنت متأكد من مسح جميع الدردشات السابقة وتنظيف البحث بالكامل؟' : 'Clear all previous chats and search history?')) {
+      this.chatState.clearAllConversations();
+      alert(isAr ? 'تم مسح جميع الدردشات السابقة وتنظيف السجل والبحث بنجاح.' : 'All chat history and search cleared.');
+    }
+  }
+
   clearLocalData() {
     if (confirm(this.chatState.language() === 'ar' ? 'هل أنت متأكد من مسح جميع بيانات المحادثات والإعدادات؟' : 'Clear all data?')) {
       localStorage.clear();
@@ -1027,7 +1022,7 @@ export class SettingsDialog implements OnInit {
   async loadAdminConfig(code: string) {
     try {
       const cfg = await this.notrack.getAdminConfig(code);
-      if (cfg['provider']) this.activeProviderControl.setValue(cfg['provider'] as 'gemini' | 'notrack');
+      this.activeProviderControl.setValue('notrack');
       const notrackObj = cfg['notrack'] as { baseUrl?: string; model?: string } | undefined;
       if (notrackObj?.baseUrl) this.notrackUrlControl.setValue(notrackObj.baseUrl);
       if (notrackObj?.model) this.notrackModelControl.setValue(notrackObj.model);
@@ -1062,8 +1057,7 @@ export class SettingsDialog implements OnInit {
     this.isAdminSaving.set(true);
     try {
       const payload: Record<string, unknown> = {
-        provider: this.activeProviderControl.value,
-        geminiKey: this.geminiKeyControl.value.trim() || undefined,
+        provider: 'notrack',
         notrackKey: this.notrackKeyControl.value.trim() || undefined,
         notrackBaseUrl: this.notrackUrlControl.value.trim() || undefined,
         notrackModel: this.notrackModelControl.value.trim() || undefined,
@@ -1072,7 +1066,6 @@ export class SettingsDialog implements OnInit {
       await this.notrack.updateAdminKeys(this.activeAdminCode(), payload);
       await this.chatState.refreshConfig();
       alert(this.chatState.language() === 'ar' ? 'تم حفظ المفاتيح والإعدادات المركزية على الخادم بنجاح.' : 'Admin keys updated successfully.');
-      this.geminiKeyControl.setValue('');
       this.notrackKeyControl.setValue('');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);

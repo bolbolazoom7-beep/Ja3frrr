@@ -88,6 +88,20 @@
         <mat-icon style="font-size: 16px;">visibility_off</mat-icon>
         <span class="hidden xs:inline">{{ chatState.language() === 'ar' ? 'دردشة مؤقتة' : 'Incognito' }}</span>
       </button>
+
+      <!-- Delete / Clear Current Conversation Button (Visible when chat has messages) -->
+      @if (chatState.currentMessages().length > 0) {
+        <button
+          type="button"
+          (click)="onDeleteCurrentChat()"
+          class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium border border-rose-500/25 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 transition-all cursor-pointer shadow-2xs"
+          [attr.title]="chatState.language() === 'ar' ? 'مسح هذه المحادثة بالكامل' : 'Clear this conversation'"
+          [attr.aria-label]="chatState.language() === 'ar' ? 'مسح هذه المحادثة بالكامل' : 'Clear this conversation'"
+        >
+          <mat-icon style="font-size: 15px; width: 15px; height: 15px;">delete_outline</mat-icon>
+          <span class="hidden md:inline">{{ chatState.language() === 'ar' ? 'مسح الدردشة' : 'Clear' }}</span>
+        </button>
+      }
     </div>
 
     <!-- Center: Brand Wordmark -->
@@ -192,14 +206,78 @@
       @if (chatState.currentMessages().length === 0) {
         <!-- Minimalist Home Screen -->
         <div class="min-h-[50vh] flex flex-col items-center justify-center px-4 text-center select-none animate-in fade-in duration-500">
-          <!-- Signature Visual: Glowing Soft Ink Orb -->
-          <div class="relative mb-5">
-            <div class="w-20 h-20 rounded-full bg-gradient-to-tr from-[#A994F7]/30 to-[#8BCFC2]/30 blur-xl absolute inset-0 animate-pulse"></div>
+          <!-- Signature Premium Visual: Ja3far Central Insignia Emblem -->
+          <div class="relative mb-6 group cursor-default select-none">
+            <!-- Radiant atmospheric bloom -->
+            <div class="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl bg-gradient-to-tr from-[#A994F7]/40 via-[#818CF8]/25 to-[#8BCFC2]/35 blur-2xl absolute -inset-2 opacity-70 group-hover:opacity-95 transition-opacity duration-700 animate-pulse"></div>
+
+            <!-- Emblem Squircle Housing with Metallic Gradient Border -->
             <div
-              class="relative w-16 h-16 rounded-2xl border flex items-center justify-center shadow-xl glow-ink"
-              [class]="chatState.theme() === 'dark' ? 'bg-[#181820] border-white/15' : 'bg-white border-black/10'"
+              class="relative w-24 h-24 sm:w-28 sm:h-28 rounded-3xl p-[1.5px] bg-gradient-to-br from-[#C084FC] via-[#A994F7]/60 to-[#8BCFC2] shadow-2xl transition-all duration-500 group-hover:scale-105 group-hover:shadow-[0_12px_40px_-5px_rgba(169,148,247,0.4)]"
             >
-              <span class="font-ruqaa text-3xl font-bold text-[#A994F7]">ج</span>
+              <!-- Frosted inner glass vessel -->
+              <div
+                class="w-full h-full rounded-[22px] flex flex-col items-center justify-center relative overflow-hidden backdrop-blur-xl border border-white/15"
+                [class]="chatState.theme() === 'dark' ? 'bg-[#14141E]/95 text-white' : 'bg-white/95 text-stone-900'"
+              >
+                <!-- Upper subtle specular glass sheen -->
+                <div class="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent pointer-events-none"></div>
+
+                <!-- Custom High-Resolution Calligraphic Emblem SVG -->
+                <svg
+                  class="w-14 h-14 sm:w-16 sm:h-16 relative z-10 transition-transform duration-500 group-hover:scale-110 drop-shadow-md"
+                  viewBox="0 0 100 100"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <defs>
+                    <linearGradient id="ja3farPrimaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#C084FC" />
+                      <stop offset="45%" stop-color="#A994F7" />
+                      <stop offset="100%" stop-color="#8BCFC2" />
+                    </linearGradient>
+                    <linearGradient id="ja3farNuqtaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#38BDF8" />
+                      <stop offset="50%" stop-color="#8BCFC2" />
+                      <stop offset="100%" stop-color="#FCD34D" />
+                    </linearGradient>
+                    <filter id="nuqtaGlow" x="-30%" y="-30%" width="160%" height="160%">
+                      <feGaussianBlur stdDeviation="2" result="blur" />
+                      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                  </defs>
+
+                  <!-- Subtle Orbital Guides & Stars -->
+                  <circle cx="50" cy="50" r="41" stroke="url(#ja3farPrimaryGrad)" stroke-width="1.2" stroke-dasharray="3 5" opacity="0.4" />
+                  <circle cx="50" cy="50" r="45" stroke="currentColor" stroke-width="0.5" opacity="0.12" />
+
+                  <!-- Four cardinal orbiting intelligence sparks -->
+                  <circle cx="50" cy="9" r="2" fill="#8BCFC2" />
+                  <circle cx="91" cy="50" r="1.8" fill="#A994F7" />
+                  <circle cx="50" cy="91" r="2" fill="#C084FC" />
+                  <circle cx="9" cy="50" r="1.8" fill="#FCD34D" />
+
+                  <!-- Elegant Arabic Letterform 'ج' (Ja3far Calligraphy with tapered tail and head flourish) -->
+                  <path
+                    d="M 68 28 C 64 24, 52 23, 40 25 C 33 26, 28 29, 27 33 C 26 37, 30 38, 38 36 C 48 34, 59 34, 62 38 C 64 41, 56 46, 47 50 C 37 54, 27 60, 27 70 C 27 81, 40 88, 57 88 C 73 88, 83 79, 83 67 C 83 58, 76 53, 68 53 C 62 53, 58 56, 58 60 C 58 65, 63 67, 67 67 C 72 67, 75 64, 76 60 C 76 59, 76 58, 76 58 C 76 65, 68 76, 55 76 C 41 76, 36 68, 36 61 C 36 53, 44 47, 54 43 C 65 39, 74 34, 74 29 C 74 27, 71 27, 68 28 Z"
+                    fill="url(#ja3farPrimaryGrad)"
+                  />
+
+                  <!-- Glowing Central Nuqta (نقطة الجيم) - Diamond Star Gemstone -->
+                  <g filter="url(#nuqtaGlow)">
+                    <path d="M 50 56 L 56 62 L 50 68 L 44 62 Z" fill="url(#ja3farNuqtaGrad)" />
+                    <circle cx="50" cy="62" r="1.5" fill="#FFFFFF" />
+                  </g>
+
+                  <!-- Sparkle Star Accent -->
+                  <path d="M 72 19 Q 74 23 78 24 Q 74 25 73 29 Q 72 25 68 24 Q 72 23 72 19 Z" fill="#FCD34D" opacity="0.95" />
+                </svg>
+
+                <!-- Micro Insignia Wordmark Badge -->
+                <span class="relative z-10 text-[9px] font-mono tracking-widest uppercase font-bold text-[#A994F7] opacity-90 mt-0.5">
+                  JA3FAR
+                </span>
+              </div>
             </div>
           </div>
 

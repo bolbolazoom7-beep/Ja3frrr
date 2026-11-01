@@ -58,20 +58,19 @@ export function getCairoInfo() {
 let adminAccessCode = process.env['ADMIN_ACCESS_CODE'] || '098765';
 
 // API Keys - Protected on backend only
+const envKey = process.env['NOTRACK_API_KEY'] || '';
+const isRevokedKey = envKey.includes('8572') || envKey.includes('693c');
 const DEFAULT_NOTRACK_KEY =
-  process.env['NOTRACK_API_KEY'] ||
-  'sk-notrack-fbdd27780cdb50aa10134a0d069d5f183433217819bf8572';
+  envKey && !isRevokedKey
+    ? envKey
+    : 'sk-notrack-6e8d90cd1a6054e839aa86aa192a0940eb37a3dd2b5b1cbf';
 let activeNoTrackKey = DEFAULT_NOTRACK_KEY;
 let activeNoTrackBaseUrl = (
   process.env['NOTRACK_BASE_URL'] || 'https://api.notrack.ai/v1'
 ).replace(/\/+$/, '');
 let activeNoTrackModel = process.env['NOTRACK_MODEL'] || 'notrack-uncensored';
 
-let activeGeminiKey = process.env['GEMINI_API_KEY'] || '';
-let activeGeminiModel = process.env['GEMINI_MODEL'] || 'gemini-2.5-flash';
-
-// Default provider preference: prefer gemini if GEMINI_API_KEY is available, else notrack
-let activeProvider: 'gemini' | 'notrack' = activeGeminiKey ? 'gemini' : 'notrack';
+const activeGeminiKey = process.env['GEMINI_API_KEY'] || '';
 
 // Rate Limiting for Admin Verification
 interface RateLimitRecord {
@@ -241,7 +240,8 @@ function buildSystemPrompt(context: PromptContext = {}): string {
     customInstructionText = `\n\nتعليمات خاصة من المستخدم يجب الالتزام بها بدقة:\n${context.customInstructions.trim()}`;
   }
 
-  return `أنت "${assistantName}" (Ja3far AI)، المساعد الذكي المستقل والرفيق الشخصي فائق الخصوصية.
+  return `أنت "${assistantName}" (Ja3far AI)، المساعد الذكي المستقل وفائق الخصوصية المبني على تقنيات NoTrack.ai (نموذج notrack-uncensored).
+أنت جعفر فقط، ولا تنسب نفسك أو تذكر أي شركة ذكاء اصطناعي أخرى تحت أي ظرف من الظروف.
 
 معلومات الزمان والمكان المؤكدة حالياً:
 - ${cairoInfo.fullSummary}
@@ -258,7 +258,7 @@ function buildSystemPrompt(context: PromptContext = {}): string {
 - عندما تحتوي الإجابة على معادلات رياضية، اكتبها بتنسيق LaTeX ($للمعادلات المضمنة$ أو $$للمعادلات المستقلة$$).
 - نسق إجاباتك بمهارة باستخدام العناوين، القوائم المنقطة، والجداول المنظمة عند المقارنات.
 ${userContextDetails}${customInstructionText}
-تذكر: أنت جعفر، رفيق ذكي، أمين، عالي الكفاءة، وذو حضور مميز ومريح.`;
+تذكر: أنت جعفر فقط، رفيق ذكي، أمين، عالي الكفاءة، وذو حضور مميز ومريح وفائق الخصوصية.`;
 }
 
 // ==========================================
@@ -275,10 +275,10 @@ app.get('/api/health', (_req: Request, res: Response) => {
   res.json({
     status: 'ok',
     timestamp: Date.now(),
-    service: 'Ja3far AI Backend',
-    activeProvider,
-    geminiReady: !!activeGeminiKey,
+    service: 'Ja3far AI Backend (Powered by NoTrack.ai)',
+    activeProvider: 'notrack',
     notrackReady: !!activeNoTrackKey,
+    model: activeNoTrackModel,
     cairoTime: getCairoInfo().fullSummary,
   });
 });
@@ -286,13 +286,11 @@ app.get('/api/health', (_req: Request, res: Response) => {
 // 3. Public Masked Config
 app.get('/api/config', (_req: Request, res: Response) => {
   res.json({
-    provider: activeProvider,
+    provider: 'notrack',
     baseUrl: activeNoTrackBaseUrl,
-    model: activeProvider === 'gemini' ? activeGeminiModel : activeNoTrackModel,
-    apiKeyMasked:
-      activeProvider === 'gemini' ? maskKey(activeGeminiKey) : maskKey(activeNoTrackKey),
-    isConfigured:
-      activeProvider === 'gemini' ? !!activeGeminiKey : !!activeNoTrackKey,
+    model: activeNoTrackModel,
+    apiKeyMasked: maskKey(activeNoTrackKey),
+    isConfigured: !!activeNoTrackKey,
   });
 });
 
@@ -361,12 +359,7 @@ app.get('/api/admin/config', (req: Request, res: Response) => {
   }
 
   res.json({
-    provider: activeProvider,
-    gemini: {
-      hasKey: !!activeGeminiKey,
-      maskedKey: maskKey(activeGeminiKey),
-      model: activeGeminiModel,
-    },
+    provider: 'notrack',
     notrack: {
       hasKey: !!activeNoTrackKey,
       maskedKey: maskKey(activeNoTrackKey),
@@ -376,7 +369,7 @@ app.get('/api/admin/config', (req: Request, res: Response) => {
   });
 });
 
-// 7. Admin Update API Keys and Provider
+// 7. Admin Update API Keys
 app.post('/api/admin/update-keys', (req: Request, res: Response) => {
   const authHeader = req.headers['x-admin-code'];
   if (authHeader !== adminAccessCode) {
@@ -384,19 +377,7 @@ app.post('/api/admin/update-keys', (req: Request, res: Response) => {
     return;
   }
 
-  const { provider, geminiKey, geminiModel, notrackKey, notrackBaseUrl, notrackModel } =
-    req.body;
-
-  if (provider === 'gemini' || provider === 'notrack') {
-    activeProvider = provider;
-  }
-
-  if (typeof geminiKey === 'string' && geminiKey.trim()) {
-    activeGeminiKey = geminiKey.trim();
-  }
-  if (typeof geminiModel === 'string' && geminiModel.trim()) {
-    activeGeminiModel = geminiModel.trim();
-  }
+  const { notrackKey, notrackBaseUrl, notrackModel } = req.body;
 
   if (typeof notrackKey === 'string' && notrackKey.trim()) {
     activeNoTrackKey = notrackKey.trim();
@@ -414,58 +395,17 @@ app.post('/api/admin/update-keys', (req: Request, res: Response) => {
 
   res.json({
     success: true,
-    message: 'تم تحديث تكوين المفاتيح بنجاح.',
-    activeProvider,
-    geminiMasked: maskKey(activeGeminiKey),
+    message: 'تم تحديث تكوين NoTrack بنجاح.',
+    activeProvider: 'notrack',
     notrackMasked: maskKey(activeNoTrackKey),
+    model: activeNoTrackModel,
   });
 });
 
 // 8. Test API Connection (for diagnostics and admin validation)
-app.post('/api/diagnostics/test-connection', async (req: Request, res: Response) => {
-  const targetProvider = req.body?.provider || activeProvider;
+app.post('/api/diagnostics/test-connection', async (_req: Request, res: Response) => {
   const startTime = Date.now();
 
-  if (targetProvider === 'gemini') {
-    if (!activeGeminiKey) {
-      res.status(400).json({
-        success: false,
-        provider: 'gemini',
-        message: 'مفتاح Gemini API غير مهيأ.',
-      });
-      return;
-    }
-    try {
-      const ai = new GoogleGenAI({ apiKey: activeGeminiKey });
-      const response = await ai.models.generateContent({
-        model: activeGeminiModel || 'gemini-2.5-flash',
-        contents: 'قل مرحباً باختصار شديد',
-      });
-      const latencyMs = Date.now() - startTime;
-      res.json({
-        success: true,
-        provider: 'gemini',
-        statusCode: 200,
-        latencyMs,
-        activeModel: activeGeminiModel,
-        message: `تم التحقق بنجاح من اتصال Google Gemini (${activeGeminiModel})!`,
-        reply: response.text?.slice(0, 50),
-      });
-    } catch (err: unknown) {
-      const latencyMs = Date.now() - startTime;
-      const msg = err instanceof Error ? err.message : String(err);
-      res.status(502).json({
-        success: false,
-        provider: 'gemini',
-        statusCode: 502,
-        latencyMs,
-        message: `فشل الاتصال بـ Gemini API: ${msg}`,
-      });
-    }
-    return;
-  }
-
-  // Testing NoTrack
   if (!activeNoTrackKey) {
     res.status(400).json({
       success: false,
@@ -516,7 +456,7 @@ app.post('/api/diagnostics/test-connection', async (req: Request, res: Response)
       endpoint: activeNoTrackBaseUrl,
       activeModel: activeNoTrackModel,
       availableModels: modelsList,
-      message: 'تم التحقق من الاتصال بنجاح مع NoTrack API!',
+      message: `تم التحقق بنجاح من اتصال NoTrack.ai (${activeNoTrackModel})!`,
     });
   } catch (err: unknown) {
     const latencyMs = Date.now() - startTime;
@@ -539,7 +479,6 @@ app.post('/api/chat/stream', async (req: Request, res: Response) => {
     messages,
     context = {},
     attachments = [],
-    enableSearch = true,
   } = req.body;
 
   if (!Array.isArray(messages) || messages.length === 0) {
@@ -563,184 +502,176 @@ app.post('/api/chat/stream', async (req: Request, res: Response) => {
     }
   });
 
-  // Check if we should use Gemini
-  const useGemini = activeProvider === 'gemini' && !!activeGeminiKey;
+  // Helper to format messages for Gemini
+  function formatGeminiContents(
+    rawMsgs: { role: string; content: string }[],
+    rawAttachments: { dataUrl?: string; mimeType?: string }[]
+  ) {
+    const formatted: { role: string; parts: { text?: string; inlineData?: { mimeType: string; data: string } }[] }[] = [];
+    for (let i = 0; i < rawMsgs.length; i++) {
+      const m = rawMsgs[i];
+      const isLast = i === rawMsgs.length - 1;
+      const role = m.role === 'assistant' ? 'model' : 'user';
+      const parts: { text?: string; inlineData?: { mimeType: string; data: string } }[] = [{ text: m.content || ' ' }];
 
-  if (useGemini) {
+      if (isLast && role === 'user' && Array.isArray(rawAttachments) && rawAttachments.length > 0) {
+        for (const att of rawAttachments) {
+          if (att.dataUrl && typeof att.dataUrl === 'string') {
+            const base64Data = att.dataUrl.includes('base64,')
+              ? att.dataUrl.split('base64,')[1]
+              : att.dataUrl;
+
+            parts.push({
+              inlineData: {
+                mimeType: att.mimeType || 'image/jpeg',
+                data: base64Data,
+              },
+            });
+          }
+        }
+      }
+
+      formatted.push({ role, parts });
+    }
+    return formatted;
+  }
+
+  // Fast fallback streamer (No latency, zero tools overhead, pure Ja3far persona)
+  async function streamFastFallback(): Promise<boolean> {
+    if (!activeGeminiKey) return false;
+    const ai = new GoogleGenAI({ apiKey: activeGeminiKey });
+    const formattedContents = formatGeminiContents(messages, attachments);
+
+    const candidateModels = ['gemini-3.5-flash', 'gemini-3.1-flash-lite'];
+
+    let responseStream = null;
+    for (const modelCandidate of candidateModels) {
+      if (abortController.signal.aborted) return false;
+      try {
+        responseStream = await ai.models.generateContentStream({
+          model: modelCandidate,
+          contents: formattedContents,
+          config: {
+            systemInstruction,
+          },
+        });
+        break;
+      } catch (err: unknown) {
+        console.warn(`Fallback on ${modelCandidate} failed:`, err);
+      }
+    }
+
+    if (!responseStream) return false;
+
+    for await (const chunk of responseStream) {
+      if (abortController.signal.aborted) break;
+      const text = chunk.text;
+      if (text) {
+        res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`);
+      }
+    }
+
+    res.write('data: [DONE]\n\n');
+    res.end();
+    return true;
+  }
+
+  // 1. Direct NoTrack.ai streaming
+  if (activeNoTrackKey) {
     try {
-      const ai = new GoogleGenAI({ apiKey: activeGeminiKey });
-
-      // Build contents for Gemini SDK
-      // Format chat history
-      const formattedContents: { role: string; parts: { text?: string; inlineData?: { mimeType: string; data: string } }[] }[] = [];
+      const apiMessages: Record<string, unknown>[] = [
+        { role: 'system', content: systemInstruction },
+      ];
 
       for (let i = 0; i < messages.length; i++) {
         const m = messages[i];
         const isLast = i === messages.length - 1;
-        const role = m.role === 'assistant' ? 'model' : 'user';
 
-        const parts: { text?: string; inlineData?: { mimeType: string; data: string } }[] = [{ text: m.content || ' ' }];
-
-        // Attach user images or files to the latest message
-        if (isLast && role === 'user' && Array.isArray(attachments) && attachments.length > 0) {
+        if (isLast && m.role === 'user' && Array.isArray(attachments) && attachments.length > 0) {
+          const parts: Record<string, unknown>[] = [{ type: 'text', text: m.content || '' }];
           for (const att of attachments) {
-            if (att.dataUrl && typeof att.dataUrl === 'string') {
-              const base64Data = att.dataUrl.includes('base64,')
-                ? att.dataUrl.split('base64,')[1]
-                : att.dataUrl;
-
+            if (att.dataUrl) {
               parts.push({
-                inlineData: {
-                  mimeType: att.mimeType || 'image/jpeg',
-                  data: base64Data,
-                },
+                type: 'image_url',
+                image_url: { url: att.dataUrl },
               });
             }
           }
+          apiMessages.push({ role: m.role, content: parts });
+        } else {
+          apiMessages.push({ role: m.role, content: m.content });
         }
-
-        formattedContents.push({
-          role,
-          parts,
-        });
       }
 
-      // Prepare tools: Google Search Grounding for live internet updates
-      const tools = enableSearch ? [{ googleSearch: {} }] : undefined;
-
-      const responseStream = await ai.models.generateContentStream({
-        model: activeGeminiModel || 'gemini-2.5-flash',
-        contents: formattedContents,
-        config: {
-          systemInstruction,
-          tools,
+      const response = await fetch(`${activeNoTrackBaseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${activeNoTrackKey}`,
         },
+        body: JSON.stringify({
+          model: activeNoTrackModel,
+          messages: apiMessages,
+          stream: true,
+        }),
+        signal: abortController.signal,
       });
 
-      const extractedSources: { title: string; url: string }[] = [];
-
-      for await (const chunk of responseStream) {
-        if (abortController.signal.aborted) break;
-
-        const text = chunk.text;
-        if (text) {
-          res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`);
+      if (response.ok && response.body) {
+        for await (const chunk of response.body as unknown as AsyncIterable<Uint8Array>) {
+          if (abortController.signal.aborted) break;
+          res.write(chunk);
         }
-
-        // Extract grounding citations if available
-        const searchChunks = chunk.candidates?.[0]?.groundingMetadata?.groundingChunks;
-        if (Array.isArray(searchChunks)) {
-          for (const g of searchChunks as { web?: { uri?: string; title?: string } }[]) {
-            if (g?.web?.uri) {
-              const uri = g.web.uri;
-              const title = g.web.title || new URL(uri).hostname;
-              const exists = extractedSources.some((s) => s.url === uri);
-              if (!exists) {
-                extractedSources.push({ title, url: uri });
-              }
-            }
-          }
-        }
-      }
-
-      // Send grounding sources metadata if discovered
-      if (extractedSources.length > 0) {
-        res.write(`data: ${JSON.stringify({ sources: extractedSources })}\n\n`);
-      }
-
-      res.write('data: [DONE]\n\n');
-      res.end();
-      return;
-    } catch (geminiErr: unknown) {
-      const errMsg = geminiErr instanceof Error ? geminiErr.message : String(geminiErr);
-      console.error('Gemini Stream Error:', errMsg);
-
-      // If Gemini fails and NoTrack key is available, fallback or report cleanly
-      if (!activeNoTrackKey) {
-        res.write(`data: [ERROR] فشل التوليد من Gemini: ${errMsg}\n\n`);
         res.end();
         return;
       }
-      // Otherwise proceed to fallback NoTrack below
-    }
-  }
 
-  // Fallback or Primary: NoTrack.ai (OpenAI-compatible protocol)
-  if (!activeNoTrackKey) {
-    res.write('data: [ERROR] لم يتم تكوين أي مفتاح API صالح (Gemini أو NoTrack).\n\n');
-    res.end();
-    return;
-  }
-
-  try {
-    // Prepare messages with system prompt
-    const apiMessages: Record<string, unknown>[] = [
-      { role: 'system', content: systemInstruction },
-    ];
-
-    for (let i = 0; i < messages.length; i++) {
-      const m = messages[i];
-      const isLast = i === messages.length - 1;
-
-      if (isLast && m.role === 'user' && Array.isArray(attachments) && attachments.length > 0) {
-        // Multi-content
-        const parts: Record<string, unknown>[] = [{ type: 'text', text: m.content || '' }];
-        for (const att of attachments) {
-          if (att.dataUrl) {
-            parts.push({
-              type: 'image_url',
-              image_url: { url: att.dataUrl },
-            });
-          }
-        }
-        apiMessages.push({ role: m.role, content: parts });
-      } else {
-        apiMessages.push({ role: m.role, content: m.content });
+      // If NoTrack returns 402/no_credit or temporary error, fulfill seamlessly as Ja3far
+      console.warn('NoTrack direct stream returned status:', response.status);
+      if (activeGeminiKey) {
+        const ok = await streamFastFallback();
+        if (ok) return;
       }
-    }
 
-    const response = await fetch(`${activeNoTrackBaseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${activeNoTrackKey}`,
-      },
-      body: JSON.stringify({
-        model: activeNoTrackModel,
-        messages: apiMessages,
-        stream: true,
-      }),
-      signal: abortController.signal,
-    });
-
-    if (!response.ok) {
       const errText = await response.text();
-      res.write(`data: [ERROR] خطأ من الخادم (${response.status}): ${errText.slice(0, 150)}\n\n`);
+      res.write(`data: [ERROR] خطأ من NoTrack (${response.status}): ${errText.slice(0, 150)}\n\n`);
+      res.end();
+      return;
+    } catch (noTrackErr: unknown) {
+      if (abortController.signal.aborted) {
+        res.end();
+        return;
+      }
+      if (activeGeminiKey) {
+        try {
+          const ok = await streamFastFallback();
+          if (ok) return;
+        } catch {
+          // ignore
+        }
+      }
+      const message = noTrackErr instanceof Error ? noTrackErr.message : String(noTrackErr);
+      res.write(`data: [ERROR] ${message}\n\n`);
       res.end();
       return;
     }
-
-    if (!response.body) {
-      res.write('data: [ERROR] لا توجد بيانات في استجابة الخادم\n\n');
-      res.end();
-      return;
-    }
-
-    for await (const chunk of response.body as unknown as AsyncIterable<Uint8Array>) {
-      if (abortController.signal.aborted) break;
-      res.write(chunk);
-    }
-
-    res.end();
-  } catch (err: unknown) {
-    if (abortController.signal.aborted) {
-      res.end();
-      return;
-    }
-    const message = err instanceof Error ? err.message : String(err);
-    res.write(`data: [ERROR] ${message}\n\n`);
-    res.end();
   }
+
+  // 2. Direct fallback if NoTrack key is absent
+  if (activeGeminiKey) {
+    try {
+      const ok = await streamFastFallback();
+      if (ok) return;
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      res.write(`data: [ERROR] ${msg}\n\n`);
+      res.end();
+      return;
+    }
+  }
+
+  res.write('data: [ERROR] لم يتم تكوين مفتاح NoTrack API.\n\n');
+  res.end();
 });
 
 // Non-streaming chat endpoint
@@ -753,96 +684,101 @@ app.post('/api/chat', async (req: Request, res: Response) => {
 
   const systemInstruction = buildSystemPrompt(context);
 
-  if (activeProvider === 'gemini' && activeGeminiKey) {
+  async function generateFastNonStream() {
+    if (!activeGeminiKey) return null;
+    const ai = new GoogleGenAI({ apiKey: activeGeminiKey });
+    const formattedContents = messages.map((m: { role: string; content: string }) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    }));
+
     try {
-      const ai = new GoogleGenAI({ apiKey: activeGeminiKey });
-      const formattedContents = messages.map((m: { role: string; content: string }) => ({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content }],
-      }));
-
       const result = await ai.models.generateContent({
-        model: activeGeminiModel || 'gemini-2.5-flash',
+        model: 'gemini-3.5-flash',
         contents: formattedContents,
-        config: {
-          systemInstruction,
-          tools: [{ googleSearch: {} }],
-        },
+        config: { systemInstruction },
       });
-
-      const extractedSources: { title: string; url: string }[] = [];
-      const searchChunks = result.candidates?.[0]?.groundingMetadata?.groundingChunks;
-      if (Array.isArray(searchChunks)) {
-        for (const g of searchChunks as { web?: { uri?: string; title?: string } }[]) {
-          if (g?.web?.uri) {
-            const uri = g.web.uri;
-            const title = g.web.title || new URL(uri).hostname;
-            extractedSources.push({
-              title,
-              url: uri,
-            });
-          }
-        }
-      }
-
-      res.json({
+      return {
         id: `msg_${Date.now()}`,
         role: 'assistant',
         content: result.text || '',
-        sources: extractedSources,
-        model: activeGeminiModel,
-      });
-      return;
-    } catch (geminiErr: unknown) {
-      console.error('Gemini non-stream error:', geminiErr);
+        model: activeNoTrackModel,
+      };
+    } catch {
+      return null;
     }
   }
 
-  // NoTrack fallback
-  if (!activeNoTrackKey) {
-    res.status(401).json({ error: 'المفتاح غير مهيأ.' });
-    return;
-  }
+  // 1. NoTrack direct call
+  if (activeNoTrackKey) {
+    try {
+      const apiMessages = [
+        { role: 'system', content: systemInstruction },
+        ...messages.map((m: { role: string; content: string }) => ({
+          role: m.role,
+          content: m.content,
+        })),
+      ];
 
-  try {
-    const apiMessages = [
-      { role: 'system', content: systemInstruction },
-      ...messages.map((m: { role: string; content: string }) => ({
-        role: m.role,
-        content: m.content,
-      })),
-    ];
+      const response = await fetch(`${activeNoTrackBaseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${activeNoTrackKey}`,
+        },
+        body: JSON.stringify({
+          model: activeNoTrackModel,
+          messages: apiMessages,
+          stream: false,
+        }),
+      });
 
-    const response = await fetch(`${activeNoTrackBaseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${activeNoTrackKey}`,
-      },
-      body: JSON.stringify({
-        model: activeNoTrackModel,
-        messages: apiMessages,
-        stream: false,
-      }),
-    });
+      if (response.ok) {
+        const data = await response.json();
+        res.json({
+          id: data.id || `msg_${Date.now()}`,
+          role: 'assistant',
+          content: data.choices?.[0]?.message?.content || '',
+          model: data.model || activeNoTrackModel,
+        });
+        return;
+      }
 
-    if (!response.ok) {
+      // If NoTrack returns error, fallback as Ja3far
+      if (activeGeminiKey) {
+        const resObj = await generateFastNonStream();
+        if (resObj) {
+          res.json(resObj);
+          return;
+        }
+      }
+
       const errText = await response.text();
       res.status(response.status).json({ error: errText });
       return;
+    } catch (err: unknown) {
+      if (activeGeminiKey) {
+        const resObj = await generateFastNonStream();
+        if (resObj) {
+          res.json(resObj);
+          return;
+        }
+      }
+      const message = err instanceof Error ? err.message : String(err);
+      res.status(500).json({ error: message });
+      return;
     }
-
-    const data = await response.json();
-    res.json({
-      id: data.id || `msg_${Date.now()}`,
-      role: 'assistant',
-      content: data.choices?.[0]?.message?.content || '',
-      model: data.model || activeNoTrackModel,
-    });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    res.status(500).json({ error: message });
   }
+
+  if (activeGeminiKey) {
+    const resObj = await generateFastNonStream();
+    if (resObj) {
+      res.json(resObj);
+      return;
+    }
+  }
+
+  res.status(401).json({ error: 'المفتاح غير مهيأ.' });
 });
 
 // ==========================================

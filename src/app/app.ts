@@ -69,10 +69,103 @@ export class App {
         }
       }, 30);
     });
+
+    if (typeof window !== 'undefined') {
+      this.setupNativeAppTouchGuards();
+    }
+  }
+
+  private setupNativeAppTouchGuards() {
+    // 1. Block multi-finger pinch gestures (two fingers zoom in / out)
+    const preventPinch = (e: TouchEvent) => {
+      if (e.touches && e.touches.length > 1) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('touchstart', preventPinch, { passive: false });
+    window.addEventListener('touchmove', preventPinch, { passive: false });
+
+    // 2. Block WebKit / Safari gesture zooming events
+    const preventGesture = (e: Event) => {
+      e.preventDefault();
+    };
+    window.addEventListener('gesturestart', preventGesture as EventListener, { passive: false });
+    window.addEventListener('gesturechange', preventGesture as EventListener, { passive: false });
+    window.addEventListener('gestureend', preventGesture as EventListener, { passive: false });
+
+    // 3. Block double-tap to zoom on mobile while preserving typing cursor taps in inputs
+    let lastTouchEnd = 0;
+    window.addEventListener(
+      'touchend',
+      (e: TouchEvent) => {
+        const now = Date.now();
+        if (now - lastTouchEnd <= 300) {
+          const target = e.target as HTMLElement | null;
+          const isInput =
+            target &&
+            (target.tagName === 'INPUT' ||
+              target.tagName === 'TEXTAREA' ||
+              target.isContentEditable);
+          if (!isInput) {
+            e.preventDefault();
+          }
+        }
+        lastTouchEnd = now;
+      },
+      { passive: false }
+    );
+
+    // 4. Block trackpad / Ctrl + Wheel zooming on desktop/tablets
+    window.addEventListener(
+      'wheel',
+      (e: WheelEvent) => {
+        if (e.ctrlKey) {
+          e.preventDefault();
+        }
+      },
+      { passive: false }
+    );
+
+    // 5. Block long-press context menu and browser copy/paste/callout bars outside of text inputs
+    window.addEventListener('contextmenu', (e: MouseEvent | TouchEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isInput =
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable);
+      if (!isInput) {
+        e.preventDefault();
+        return false;
+      }
+      return true;
+    });
+
+    // 6. Block text selection dragging outside inputs and textareas
+    window.addEventListener('selectstart', (e: Event) => {
+      const target = e.target as HTMLElement | null;
+      const isInput =
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable);
+      if (!isInput) {
+        e.preventDefault();
+        return false;
+      }
+      return true;
+    });
   }
 
   toggleQuickTheme() {
     const next = this.chatState.theme() === 'dark' ? 'light' : 'dark';
     this.chatState.setTheme(next);
+  }
+
+  onDeleteCurrentChat() {
+    const isAr = this.chatState.language() === 'ar';
+    if (confirm(isAr ? 'هل أنت متأكد من مسح هذه المحادثة بالكامل؟' : 'Clear this conversation?')) {
+      this.chatState.deleteCurrentConversation();
+    }
   }
 }

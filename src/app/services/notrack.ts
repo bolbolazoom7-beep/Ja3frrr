@@ -50,18 +50,18 @@ export class NoTrackClient {
         this.http.get<ServerConfigResponse>('/api/config')
       );
       return {
-        provider: res.provider || 'gemini',
+        provider: 'notrack',
         baseUrl: res.baseUrl || 'https://api.notrack.ai/v1',
-        model: res.model || 'gemini-2.5-flash',
+        model: res.model || 'notrack-uncensored',
         apiKeyMasked: res.apiKeyMasked || '',
         isCustomConfigured: !!res.apiKeyMasked,
         status: res.isConfigured ? 'connected' : 'not_configured',
       };
     } catch {
       return {
-        provider: 'gemini',
+        provider: 'notrack',
         baseUrl: 'https://api.notrack.ai/v1',
-        model: 'gemini-2.5-flash',
+        model: 'notrack-uncensored',
         apiKeyMasked: '',
         isCustomConfigured: false,
         status: 'error',
@@ -132,7 +132,7 @@ export class NoTrackClient {
     );
   }
 
-  async testConnection(provider?: 'gemini' | 'notrack'): Promise<DiagnosticResult> {
+  async testConnection(provider = 'notrack'): Promise<DiagnosticResult> {
     const startTime = Date.now();
     try {
       const res = await firstValueFrom(
@@ -147,7 +147,7 @@ export class NoTrackClient {
         notrackOk: res.success ?? true,
         latencyMs: res.latencyMs || Date.now() - startTime,
         statusMessage: res.message || 'تم التحقق من الاتصال بنجاح',
-        activeModel: res.activeModel || (provider === 'notrack' ? 'notrack-uncensored' : 'gemini-2.5-flash'),
+        activeModel: res.activeModel || 'notrack-uncensored',
         timestamp: Date.now(),
         version: '2.0.0-ja3far',
       };
@@ -159,7 +159,7 @@ export class NoTrackClient {
         message?: string;
       };
       const errorMsg =
-        errorObj.error?.message || errorObj.message || 'فشل الاتصال بمزود الذكاء الاصطناعي';
+        errorObj.error?.message || errorObj.message || 'فشل الاتصال بمزود NoTrack.ai';
       return {
         frontendOk: true,
         backendOk: errorObj.status !== 0 && errorObj.status !== 504,
@@ -167,7 +167,7 @@ export class NoTrackClient {
         latencyMs,
         statusMessage: errorMsg,
         category: errorObj.error?.errorCategory || 'NETWORK_ERROR',
-        activeModel: provider === 'notrack' ? 'notrack-uncensored' : 'gemini-2.5-flash',
+        activeModel: 'notrack-uncensored',
         timestamp: Date.now(),
         version: '2.0.0-ja3far',
       };

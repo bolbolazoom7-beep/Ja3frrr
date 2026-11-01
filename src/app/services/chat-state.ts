@@ -108,9 +108,9 @@ export class ChatState {
   private availableVoices: SpeechSynthesisVoice[] = [];
 
   config = signal<NoTrackConfig>({
-    provider: 'gemini',
+    provider: 'notrack',
     baseUrl: 'https://api.notrack.ai/v1',
-    model: 'gemini-2.5-flash',
+    model: 'notrack-uncensored',
     apiKeyMasked: '',
     isCustomConfigured: false,
     status: 'connected',
@@ -477,6 +477,17 @@ export class ChatState {
       const remaining = this.visibleConversations();
       this.currentConversationId.set(remaining.length > 0 ? remaining[0].id : null);
     }
+  }
+
+  deleteCurrentConversation() {
+    const id = this.currentConversationId();
+    if (id) {
+      this.deleteConversation(id);
+    }
+  }
+
+  clearSearch() {
+    this.searchQuery.set('');
   }
 
   clearAllConversations() {
